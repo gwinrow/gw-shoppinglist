@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping List App</title>
+    <title>Smart Shopping List</title>
     <style>
         :root {
             --primary: #4a90e2;
+            --secondary: #2ecc71;
             --bg: #f4f7f6;
             --text: #333;
             --white: #ffffff;
@@ -14,66 +15,115 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', system-ui, sans-serif;
             background-color: var(--bg);
             color: var(--text);
             display: flex;
             justify-content: center;
             padding: 20px;
+            margin: 0;
         }
 
         .container {
             width: 100%;
-            max-width: 400px;
+            max-width: 450px;
             background: var(--white);
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            position: relative;
         }
 
-        h1 { text-align: center; margin-bottom: 20px; }
+        h1 { text-align: center; margin-bottom: 20px; font-size: 1.5rem; color: var(--primary); }
         
+        /* Input area */
         .input-group {
+            position: sticky;
+            top: 0;
+            background: white;
+            padding-bottom: 15px;
+            z-index: 100;
             display: flex;
             gap: 10px;
-            margin-bottom: 30px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            flex: 1;
         }
 
         input[type="text"] {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            width: 100%;
+            padding: 12px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
             outline: none;
+            box-sizing: border-box;
+            font-size: 16px; /* Prevents iOS zoom */
         }
+
+        input[type="text"]:focus { border-color: var(--primary); }
 
         button#add-btn {
             background: var(--primary);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            padding: 0 20px;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: bold;
         }
 
-        .list-section {
-            margin-bottom: 30px;
+        /* Dropdown Suggestions */
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            z-index: 200;
+            margin-top: 5px;
         }
 
+        .suggestion-item {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .suggestion-item:hover { background: #f8f9fa; }
+
+        .tag {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .tag-buy { background: #e3f2fd; color: #1976d2; }
+        .tag-bought { background: #e8f5e9; color: #2e7d32; }
+
+        /* Lists Styles */
         .list-section h2 {
-            font-size: 1.1rem;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
             border-bottom: 2px solid var(--bg);
             padding-bottom: 5px;
-            margin-bottom: 10px;
-            color: #666;
+            margin: 20px 0 10px 0;
         }
 
-        ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
+        ul { list-style: none; padding: 0; margin: 0; }
 
         li {
             display: flex;
@@ -81,58 +131,47 @@
             padding: 12px;
             background: #fff;
             border-bottom: 1px solid #f0f0f0;
-            transition: background 0.2s;
         }
 
-        li:last-child { border-bottom: none; }
-
-        .item-text {
-            flex: 1;
-            margin-left: 10px;
-            cursor: pointer;
-        }
+        .item-text { flex: 1; margin-left: 12px; cursor: pointer; }
 
         .bought-item .item-text {
             text-decoration: line-through;
-            color: #888;
+            color: #aaa;
         }
 
         .delete-btn {
             background: none;
             border: none;
-            color: #ff5252;
+            color: #ccc;
             cursor: pointer;
-            font-size: 0.8rem;
-            padding: 5px;
-            opacity: 0.6;
+            font-size: 1.2rem;
+            padding: 0 5px;
         }
 
-        .delete-btn:hover { opacity: 1; }
+        .delete-btn:hover { color: #ff5252; }
 
-        input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
+        input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>My Groceries</h1>
+    <h1>Groceries</h1>
     
     <div class="input-group">
-        <input type="text" id="item-input" placeholder="Add an item..." autocomplete="off">
+        <div class="input-wrapper">
+            <input type="text" id="item-input" placeholder="Type to search or add..." autocomplete="off">
+            <div id="suggestions" class="suggestions"></div>
+        </div>
         <button id="add-btn">Add</button>
     </div>
 
-    <!-- TO BUY LIST -->
     <div class="list-section">
         <h2 id="to-buy-count">To Buy (0)</h2>
         <ul id="to-buy-list"></ul>
     </div>
 
-    <!-- BOUGHT LIST -->
     <div class="list-section">
         <h2 id="bought-count">Bought (0)</h2>
         <ul id="bought-list"></ul>
@@ -142,10 +181,9 @@
 <script>
     const itemInput = document.getElementById('item-input');
     const addBtn = document.getElementById('add-btn');
+    const suggestionsBox = document.getElementById('suggestions');
     const toBuyList = document.getElementById('to-buy-list');
     const boughtList = document.getElementById('bought-list');
-    const toBuyCount = document.getElementById('to-buy-count');
-    const boughtCount = document.getElementById('bought-count');
 
     let items = JSON.parse(localStorage.getItem('shoppingList')) || [];
 
@@ -156,28 +194,46 @@
 
     function addItem() {
         const text = itemInput.value.trim();
-        if (text === '') return;
+        if (!text) return;
 
-        const newItem = {
+        // Check if it already exists
+        const existing = items.find(i => i.text.toLowerCase() === text.toLowerCase());
+        if (existing) {
+            handleSuggestionClick(existing);
+            return;
+        }
+
+        items.push({
             id: Date.now(),
             text: text,
             status: 'toBuy',
-            timestamp: Date.now() // Used for sorting
-        };
+            timestamp: Date.now()
+        });
 
-        items.push(newItem);
         itemInput.value = '';
+        suggestionsBox.style.display = 'none';
+        save();
+    }
+
+    function handleSuggestionClick(item) {
+        // If it's in the bought list, move it back to toBuy
+        if (item.status === 'bought') {
+            item.status = 'toBuy';
+            item.timestamp = Date.now(); // Put at bottom of To Buy
+        }
+        
+        itemInput.value = '';
+        suggestionsBox.style.display = 'none';
         save();
     }
 
     function toggleItem(id) {
         items = items.map(item => {
             if (item.id === id) {
-                const newStatus = item.status === 'toBuy' ? 'bought' : 'toBuy';
                 return { 
                     ...item, 
-                    status: newStatus, 
-                    timestamp: Date.now() // Update time on move/re-add
+                    status: item.status === 'toBuy' ? 'bought' : 'toBuy', 
+                    timestamp: Date.now() 
                 };
             }
             return item;
@@ -190,34 +246,58 @@
         save();
     }
 
+    function updateSuggestions() {
+        const query = itemInput.value.toLowerCase();
+        suggestionsBox.innerHTML = '';
+
+        if (!query) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        const matches = items.filter(i => i.text.toLowerCase().includes(query));
+
+        if (matches.length > 0) {
+            matches.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                
+                const label = item.status === 'toBuy' ? 'To Buy' : 'In Bought';
+                const tagClass = item.status === 'toBuy' ? 'tag-buy' : 'tag-bought';
+
+                div.innerHTML = `
+                    <span>${item.text}</span>
+                    <span class="tag ${tagClass}">${label}</span>
+                `;
+                
+                div.onclick = () => handleSuggestionClick(item);
+                suggestionsBox.appendChild(div);
+            });
+            suggestionsBox.style.display = 'block';
+        } else {
+            suggestionsBox.style.display = 'none';
+        }
+    }
+
     function render() {
-        // Clear current lists
         toBuyList.innerHTML = '';
         boughtList.innerHTML = '';
 
-        // Filter items
-        const toBuyItems = items.filter(i => i.status === 'toBuy');
-        const boughtItems = items.filter(i => i.status === 'bought');
+        // Sort To Buy: Ascending (Oldest first)
+        const toBuyItems = items
+            .filter(i => i.status === 'toBuy')
+            .sort((a, b) => a.timestamp - b.timestamp);
 
-        // Sort To Buy: Ascending (Oldest at top)
-        toBuyItems.sort((a, b) => a.timestamp - b.timestamp);
+        // Sort Bought: Descending (Newest first)
+        const boughtItems = items
+            .filter(i => i.status === 'bought')
+            .sort((a, b) => b.timestamp - a.timestamp);
 
-        // Sort Bought: Descending (Newest at top)
-        boughtItems.sort((a, b) => b.timestamp - a.timestamp);
+        toBuyItems.forEach(item => toBuyList.appendChild(createItemEl(item)));
+        boughtItems.forEach(item => boughtList.appendChild(createItemEl(item)));
 
-        // Render To Buy
-        toBuyItems.forEach(item => {
-            toBuyList.appendChild(createItemEl(item));
-        });
-
-        // Render Bought
-        boughtItems.forEach(item => {
-            boughtList.appendChild(createItemEl(item));
-        });
-
-        // Update Headers
-        toBuyCount.textContent = `To Buy (${toBuyItems.length})`;
-        boughtCount.textContent = `Bought (${boughtItems.length})`;
+        document.getElementById('to-buy-count').textContent = `To Buy (${toBuyItems.length})`;
+        document.getElementById('bought-count').textContent = `Bought (${boughtItems.length})`;
     }
 
     function createItemEl(item) {
@@ -236,7 +316,7 @@
 
         const delBtn = document.createElement('button');
         delBtn.className = 'delete-btn';
-        delBtn.textContent = '✕';
+        delBtn.innerHTML = '&times;';
         delBtn.onclick = (e) => {
             e.stopPropagation();
             deleteItem(item.id);
@@ -249,10 +329,17 @@
     }
 
     // Event Listeners
+    itemInput.addEventListener('input', updateSuggestions);
     addBtn.onclick = addItem;
     itemInput.onkeypress = (e) => { if (e.key === 'Enter') addItem(); };
 
-    // Initial render
+    // Close dropdown if clicking outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.input-wrapper')) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
     render();
 </script>
 
