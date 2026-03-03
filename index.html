@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopping List App</title>
+    <style>
+        :root {
+            --primary: #4a90e2;
+            --bg: #f4f7f6;
+            --text: #333;
+            --white: #ffffff;
+            --border: #ddd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: var(--white);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        h1 { text-align: center; margin-bottom: 20px; }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            outline: none;
+        }
+
+        button#add-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .list-section {
+            margin-bottom: 30px;
+        }
+
+        .list-section h2 {
+            font-size: 1.1rem;
+            border-bottom: 2px solid var(--bg);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            color: #666;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        li {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: #fff;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        }
+
+        li:last-child { border-bottom: none; }
+
+        .item-text {
+            flex: 1;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .bought-item .item-text {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: #ff5252;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 5px;
+            opacity: 0.6;
+        }
+
+        .delete-btn:hover { opacity: 1; }
+
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>My Groceries</h1>
+    
+    <div class="input-group">
+        <input type="text" id="item-input" placeholder="Add an item..." autocomplete="off">
+        <button id="add-btn">Add</button>
+    </div>
+
+    <!-- TO BUY LIST -->
+    <div class="list-section">
+        <h2 id="to-buy-count">To Buy (0)</h2>
+        <ul id="to-buy-list"></ul>
+    </div>
+
+    <!-- BOUGHT LIST -->
+    <div class="list-section">
+        <h2 id="bought-count">Bought (0)</h2>
+        <ul id="bought-list"></ul>
+    </div>
+</div>
+
+<script>
+    const itemInput = document.getElementById('item-input');
+    const addBtn = document.getElementById('add-btn');
+    const toBuyList = document.getElementById('to-buy-list');
+    const boughtList = document.getElementById('bought-list');
+    const toBuyCount = document.getElementById('to-buy-count');
+    const boughtCount = document.getElementById('bought-count');
+
+    let items = JSON.parse(localStorage.getItem('shoppingList')) || [];
+
+    function save() {
+        localStorage.setItem('shoppingList', JSON.stringify(items));
+        render();
+    }
+
+    function addItem() {
+        const text = itemInput.value.trim();
+        if (text === '') return;
+
+        const newItem = {
+            id: Date.now(),
+            text: text,
+            status: 'toBuy',
+            timestamp: Date.now() // Used for sorting
+        };
+
+        items.push(newItem);
+        itemInput.value = '';
+        save();
+    }
+
+    function toggleItem(id) {
+        items = items.map(item => {
+            if (item.id === id) {
+                const newStatus = item.status === 'toBuy' ? 'bought' : 'toBuy';
+                return { 
+                    ...item, 
+                    status: newStatus, 
+                    timestamp: Date.now() // Update time on move/re-add
+                };
+            }
+            return item;
+        });
+        save();
+    }
+
+    function deleteItem(id) {
+        items = items.filter(item => item.id !== id);
+        save();
+    }
+
+    function render() {
+        // Clear current lists
+        toBuyList.innerHTML = '';
+        boughtList.innerHTML = '';
+
+        // Filter items
+        const toBuyItems = items.filter(i => i.status === 'toBuy');
+        const boughtItems = items.filter(i => i.status === 'bought');
+
+        // Sort To Buy: Ascending (Oldest at top)
+        toBuyItems.sort((a, b) => a.timestamp - b.timestamp);
+
+        // Sort Bought: Descending (Newest at top)
+        boughtItems.sort((a, b) => b.timestamp - a.timestamp);
+
+        // Render To Buy
+        toBuyItems.forEach(item => {
+            toBuyList.appendChild(createItemEl(item));
+        });
+
+        // Render Bought
+        boughtItems.forEach(item => {
+            boughtList.appendChild(createItemEl(item));
+        });
+
+        // Update Headers
+        toBuyCount.textContent = `To Buy (${toBuyItems.length})`;
+        boughtCount.textContent = `Bought (${boughtItems.length})`;
+    }
+
+    function createItemEl(item) {
+        const li = document.createElement('li');
+        if (item.status === 'bought') li.className = 'bought-item';
+
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = (item.status === 'bought');
+        checkbox.onchange = () => toggleItem(item.id);
+
+        const span = document.createElement('span');
+        span.className = 'item-text';
+        span.textContent = item.text;
+        span.onclick = () => toggleItem(item.id);
+
+        const delBtn = document.createElement('button');
+        delBtn.className = 'delete-btn';
+        delBtn.textContent = '✕';
+        delBtn.onclick = (e) => {
+            e.stopPropagation();
+            deleteItem(item.id);
+        };
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(delBtn);
+        return li;
+    }
+
+    // Event Listeners
+    addBtn.onclick = addItem;
+    itemInput.onkeypress = (e) => { if (e.key === 'Enter') addItem(); };
+
+    // Initial render
+    render();
+</script>
+
+</body>
+</html>
